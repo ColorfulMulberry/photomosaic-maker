@@ -1,7 +1,7 @@
 from PIL import Image
 import tkinter as tk
 from tkinter import filedialog as fd
-import imagehash
+import numpy as np
 
 
 class App(tk.Frame):
@@ -52,7 +52,7 @@ class App(tk.Frame):
         self.size_scale = tk.Scale(
             self,
             from_=5,
-            to=100,
+            to=150,
             orient=tk.HORIZONTAL,
             label="    Square Size:",
             font=("Verdana", 15),
@@ -70,6 +70,7 @@ class App(tk.Frame):
             label=" Enlarge Output:",
             font=("Verdana", 15),
             length=200,
+            resolution=0.1,
         )
         self.enlarge_scale.pack()
         self.enlarge_scale.set(1)  # set the initial multiplier value
@@ -126,6 +127,22 @@ class App(tk.Frame):
             width=50,
         )
         self.source_status.pack()
+
+    # calculate the average color of an image
+    def get_avg_color(self, im: Image.Image):
+        img_arr = np.array(im)
+        avg = np.average(img_arr, (0, 1))
+        return (avg[0], avg[1], avg[2])
+
+    # calculate the euclidean distance of two images' average color
+    def euclidean_dist(
+        self, region: (float, float, float), comp: (float, float, float)
+    ):
+        (r1, g1, b1), (r2, g2, b2) = region, comp
+        r = (r2 - r1) ** 2
+        g = (g2 - g1) ** 2
+        b = (b2 - b1) ** 2
+        return np.sqrt(r + g + b)
 
     # extract the filename without the names of parent directories from a file pointer string
     def trim_filename(self, str):
@@ -217,17 +234,15 @@ class App(tk.Frame):
             self.src_imgs[filepath] = im.resize(
                 (self.box_size, self.box_size)
             )  # change this to be scale value
-            self.src_hashes[filepath] = imagehash.colorhash(
-                self.src_imgs[filepath], binbits=6
-            )
+            self.src_hashes[filepath] = self.get_avg_color(self.src_imgs[filepath])
             print(self.src_hashes[filepath])
 
     # resize input image size to be divisible by the box size
     def resize_input_img(self):
         # resize input image to be divisible by the box size
         self.input_og_width, self.input_og_height = (
-            self.input_img.width * self.resize_amt,
-            self.input_img.height * self.resize_amt,
+            (int)(self.input_img.width * self.resize_amt),
+            (int)(self.input_img.height * self.resize_amt),
         )
 
         # resize input img if width not divisible by square size
@@ -296,7 +311,7 @@ class App(tk.Frame):
         for y in range(y_times):
             print("Replacing row", y + 1)
             for x in range(x_times):
-                # this box represents an individual square on the input image
+                # this box represents an individual region on the output image
                 box = (
                     x * self.box_size,
                     y * self.box_size,
@@ -304,22 +319,22 @@ class App(tk.Frame):
                     y * self.box_size + self.box_size,
                 )
                 region = self.output_img.crop(box)
-                input_hash = imagehash.colorhash(region, binbits=6)
+                input_hash = self.get_avg_color(region)
 
                 if input_hash in hash_dict:  # if calc previously done, use stored value
                     self.output_img.paste(self.src_imgs[hash_dict[input_hash]], box)
                 else:
                     cur_best_im = None
                     cur_best_score = None
-                    # calculate hamming distance for each image against the cropped square
+                    # calculate euclidean distance for each image against the cropped region
                     for filepath, im_hash in self.src_hashes.items():
+                        res = self.euclidean_dist(input_hash, im_hash)
                         if cur_best_score is not None:
-                            res = input_hash - im_hash
                             if res < cur_best_score:
                                 cur_best_score = res
                                 cur_best_im = filepath
                         else:  # if this is the first calculation, store it regardless of score
-                            cur_best_score = input_hash - im_hash
+                            cur_best_score = res
                             cur_best_im = filepath
                     self.output_img.paste(self.src_imgs[cur_best_im], box)
 
