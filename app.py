@@ -20,7 +20,7 @@ class App(tk.Frame):
             relief=tk.RIDGE,
         )
         # add widget to the window
-        self.title.pack(pady=60)
+        self.title.pack(pady=40)
 
         # create input image selection button
         self.input_image_btn = tk.Button(
@@ -60,6 +60,19 @@ class App(tk.Frame):
         )
         self.size_scale.pack()
         self.size_scale.set(20)  # set the initial box size value
+
+        # create slider to choose how much to enlarge the output image compared to input
+        self.enlarge_scale = tk.Scale(
+            self,
+            from_=1,
+            to=15,
+            orient=tk.HORIZONTAL,
+            label=" Enlarge Output:",
+            font=("Verdana", 15),
+            length=200,
+        )
+        self.enlarge_scale.pack()
+        self.enlarge_scale.set(1)  # set the initial multiplier value
 
         # create button to generate the photomosaic
         self.photomosaic_btn = tk.Button(
@@ -205,14 +218,17 @@ class App(tk.Frame):
                 (self.box_size, self.box_size)
             )  # change this to be scale value
             self.src_hashes[filepath] = imagehash.colorhash(
-                self.src_imgs[filepath], binbits=3
+                self.src_imgs[filepath], binbits=6
             )
             print(self.src_hashes[filepath])
 
     # resize input image size to be divisible by the box size
     def resize_input_img(self):
         # resize input image to be divisible by the box size
-        self.input_og_width, self.input_og_height = self.input_img.size
+        self.input_og_width, self.input_og_height = (
+            self.input_img.width * self.resize_amt,
+            self.input_img.height * self.resize_amt,
+        )
 
         # resize input img if width not divisible by square size
         if self.input_og_width % self.box_size == 0:
@@ -228,7 +244,7 @@ class App(tk.Frame):
             self.input_new_height = self.input_og_height + (
                 self.box_size - (self.input_og_height % self.box_size)
             )
-        self.input_img = self.input_img.resize(
+        self.output_img = self.input_img.resize(
             (self.input_new_width, self.input_new_height)
         )
         print(
@@ -262,6 +278,7 @@ class App(tk.Frame):
             return
 
         self.box_size = self.size_scale.get()
+        self.resize_amt = self.enlarge_scale.get()
 
         # perform necessary resizing on source and input images
         self.resize_hash_src_imgs()
@@ -277,7 +294,7 @@ class App(tk.Frame):
         )
 
         for y in range(y_times):
-            print("Replacing line", y + 1)
+            print("Replacing row", y + 1)
             for x in range(x_times):
                 # this box represents an individual square on the input image
                 box = (
@@ -286,10 +303,11 @@ class App(tk.Frame):
                     x * self.box_size + self.box_size,
                     y * self.box_size + self.box_size,
                 )
-                region = self.input_img.crop(box)
-                input_hash = imagehash.colorhash(region, binbits=3)
+                region = self.output_img.crop(box)
+                input_hash = imagehash.colorhash(region, binbits=6)
+
                 if input_hash in hash_dict:  # if calc previously done, use stored value
-                    self.input_img.paste(self.src_imgs[hash_dict[input_hash]], box)
+                    self.output_img.paste(self.src_imgs[hash_dict[input_hash]], box)
                 else:
                     cur_best_im = None
                     cur_best_score = None
@@ -303,10 +321,10 @@ class App(tk.Frame):
                         else:  # if this is the first calculation, store it regardless of score
                             cur_best_score = input_hash - im_hash
                             cur_best_im = filepath
-                    self.input_img.paste(self.src_imgs[cur_best_im], box)
+                    self.output_img.paste(self.src_imgs[cur_best_im], box)
 
         # save the image, rescale back to original size OR rescale to given size
         # maybe make this part into a function
-        self.input_img.save("edited.png")
+        self.output_img.save("edited.png")
         self.status_label.config(text="Photomosaic saved as edited.png")
         print("Photomosaic saved as edited.png")
