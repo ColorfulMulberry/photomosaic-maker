@@ -9,7 +9,7 @@ class App(tk.Frame):
         super().__init__(master, **kwargs)
 
         # create a title label
-        self.w = tk.Label(
+        self.title = tk.Label(
             self,
             text="Photomosaic Generator",
             bg="#A0C0BC",
@@ -20,7 +20,7 @@ class App(tk.Frame):
             relief=tk.RIDGE,
         )
         # add widget to the window
-        self.w.pack(pady=100)
+        self.title.pack(pady=60)
 
         # create input image selection button
         self.input_image_btn = tk.Button(
@@ -48,8 +48,21 @@ class App(tk.Frame):
         )
         self.src_img_btn.pack(pady=30)
 
+        # create slider to choose size of squares
+        self.size_scale = tk.Scale(
+            self,
+            from_=5,
+            to=100,
+            orient=tk.HORIZONTAL,
+            label="    Square Size:",
+            font=("Verdana", 15),
+            length=200,
+        )
+        self.size_scale.pack()
+        self.size_scale.set(20)  # set the initial box size value
+
         # create button to generate the photomosaic
-        self.make_pm_btn = tk.Button(
+        self.photomosaic_btn = tk.Button(
             self,
             text="Create Photomosaic",
             font=("Verdana", 15),
@@ -59,7 +72,7 @@ class App(tk.Frame):
             cursor="hand2",
             command=self.make_photomosaic,
         )
-        self.make_pm_btn.pack()
+        self.photomosaic_btn.pack(pady=20)
 
         # create a status label to display status and error messages
         self.status_label = tk.Label(
@@ -73,7 +86,33 @@ class App(tk.Frame):
             relief=tk.RIDGE,
             wraplength=750,
         )
-        self.status_label.pack(pady=70)
+        self.status_label.pack(pady=50)
+
+        # create an input status label to show selected input image
+        self.input_status = tk.Label(
+            self,
+            text="Input image: None selected.",
+            bg="#c4c5c6",
+            font=("Verdana", 14, "italic"),
+            pady=13,
+            bd=4,
+            relief=tk.RIDGE,
+            width=50,
+        )
+        self.input_status.pack()
+
+        # create an input status label to show selected input image
+        self.source_status = tk.Label(
+            self,
+            text="Source images: None selected.",
+            bg="#c4c5c6",
+            font=("Verdana", 14, "italic"),
+            pady=13,
+            bd=4,
+            relief=tk.RIDGE,
+            width=50,
+        )
+        self.source_status.pack()
 
     # extract the filename without the names of parent directories from a file pointer string
     def trim_filename(self, str):
@@ -86,23 +125,40 @@ class App(tk.Frame):
             title="Select an Image File",
             filetypes=[("Image Filetypes", "*.png *.jpg *.jpeg")],
         )
-        try:
-            self.input_img = Image.open(img_path)
-        except FileNotFoundError:  # incorrect file pointer
-            self.status_label.config(text="Input image file could not be found.")
-            print("Image file could not be found")
-        except AttributeError:  # no file pointer set
-            self.status_label.config(text="Input image not set. Choose an image first.")
-            print("Input image not set. Choose an image first.")
+        # file path not empty
+        if img_path:
+            try:
+                self.input_img = Image.open(img_path)
+            except FileNotFoundError:  # incorrect file pointer
+                self.status_label.config(text="Input image file could not be found.")
+                print("Image file could not be found")
+            except AttributeError:  # no file pointer set
+                self.status_label.config(
+                    text="Input image not set. Choose an image first."
+                )
+                print("Input image not set. Choose an image first.")
+            else:
+                flname = self.trim_filename(img_path)
+                self.status_label.config(
+                    text=flname
+                    + " selected as the input image. Its dimensions are "
+                    + str(self.input_img.width)
+                    + "x"
+                    + str(self.input_img.height)
+                    + "."
+                )
+                if len(flname) > 15:  # trim name if too long
+                    flname = flname[:15] + "..."
+                self.input_status.config(
+                    text="Input image: "
+                    + flname
+                    + "   Size: "
+                    + str(self.input_img.width)
+                    + "x"
+                    + str(self.input_img.height)
+                )
         else:
-            self.status_label.config(
-                text=self.trim_filename(img_path)
-                + " selected as the input image. Its dimensions are "
-                + str(self.input_img.width)
-                + "x"
-                + str(self.input_img.height)
-                + "."
-            )
+            self.input_status.config(text="Input image: None selected.")
 
     # opens the file explorer to choose the source (smaller) images for the photomosaic
     def open_src_imgs(self):
@@ -119,7 +175,6 @@ class App(tk.Frame):
             try:
                 self.src_imgs[src_img] = Image.open(src_img)
             except FileNotFoundError:  # incorrect file pointer
-                self.status_label.config(text="Source image file could not be found.")
                 print("Source image file could not be found.")
             else:
                 if src_str_list != "":
@@ -127,10 +182,20 @@ class App(tk.Frame):
                 else:
                     src_str_list = src_str_list + self.trim_filename(src_img)
         if self.src_imgs:  # if hash list non-empty display list
-            self.status_label.config(text=src_str_list + " selected as source images.")
+            if len(src_str_list) > 50:
+                self.status_label.config(
+                    text=src_str_list[:50] + "... selected as source images."
+                )
+            else:
+                self.status_label.config(
+                    text=src_str_list + " selected as source images."
+                )
+            self.source_status.config(
+                text="Source images: " + str(len(self.src_img_list)) + " selected."
+            )
         else:
             self.status_label.config(text="No source images selected.")
-            print("No source images selected.")
+            self.source_status.config(text="Source images: None selected.")
 
     # resize source images to match the box size
     def resize_hash_src_imgs(self):
@@ -192,15 +257,18 @@ class App(tk.Frame):
 
     # create the photomosaic using input image and source images
     def make_photomosaic(self):
-        self.box_size = 20
-
         # check that source and input images are set
         if not self.check_creation_reqs():
             return
 
+        self.box_size = self.size_scale.get()
+
         # perform necessary resizing on source and input images
         self.resize_hash_src_imgs()
         self.resize_input_img()
+
+        print("Generating photomosaic...")
+        hash_dict = {}  # holds results from previous hamming dist calculations to optimize
 
         # number of iterations lengthwise and heightwise
         x_times, y_times = (
@@ -208,11 +276,8 @@ class App(tk.Frame):
             self.input_new_height // self.box_size,
         )
 
-        self.status_label.config(text="Generating the photomosaic...")
-        print("Generating photomosaic...")
-        hash_dict = {}  # holds results from previous hamming dist calculations to optimize
         for y in range(y_times):
-            print("Replacing line ", y + 1)
+            print("Replacing line", y + 1)
             for x in range(x_times):
                 # this box represents an individual square on the input image
                 box = (
@@ -239,7 +304,9 @@ class App(tk.Frame):
                             cur_best_score = input_hash - im_hash
                             cur_best_im = filepath
                     self.input_img.paste(self.src_imgs[cur_best_im], box)
+
         # save the image, rescale back to original size OR rescale to given size
+        # maybe make this part into a function
         self.input_img.save("edited.png")
         self.status_label.config(text="Photomosaic saved as edited.png")
         print("Photomosaic saved as edited.png")
