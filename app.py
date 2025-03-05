@@ -135,9 +135,7 @@ class App(tk.Frame):
         return (avg[0], avg[1], avg[2])
 
     # calculate the euclidean distance of two images' average color
-    def euclidean_dist(
-        self, region: (float, float, float), comp: (float, float, float)
-    ):
+    def euclidean_dist(self, region, comp):
         (r1, g1, b1), (r2, g2, b2) = region, comp
         r = (r2 - r1) ** 2
         g = (g2 - g1) ** 2
@@ -231,11 +229,9 @@ class App(tk.Frame):
     def resize_hash_src_imgs(self):
         # resize each source image to the selected box size
         for filepath, im in self.src_imgs.items():
-            self.src_imgs[filepath] = im.resize(
-                (self.box_size, self.box_size)
-            )  # change this to be scale value
+            self.src_imgs[filepath] = im.resize((self.box_size, self.box_size))
+            # get the avg color for each resized source image
             self.src_hashes[filepath] = self.get_avg_color(self.src_imgs[filepath])
-            print(self.src_hashes[filepath])
 
     # resize input image size to be divisible by the box size
     def resize_input_img(self):
@@ -286,12 +282,19 @@ class App(tk.Frame):
         else:
             return True
 
+    # save the output image to the computer
+    def save_img(self):
+        self.output_img.save("edited.png")
+        self.status_label.config(text="Photomosaic saved as edited.png")
+        print("Photomosaic saved as edited.png")
+
     # create the photomosaic using input image and source images
     def make_photomosaic(self):
         # check that source and input images are set
         if not self.check_creation_reqs():
             return
 
+        # get values from GUI scales
         self.box_size = self.size_scale.get()
         self.resize_amt = self.enlarge_scale.get()
 
@@ -300,7 +303,7 @@ class App(tk.Frame):
         self.resize_input_img()
 
         print("Generating photomosaic...")
-        hash_dict = {}  # holds results from previous hamming dist calculations to optimize
+        hash_dict = {}  # holds results from previous euclidean dist calculations to optimize
 
         # number of iterations lengthwise and heightwise
         x_times, y_times = (
@@ -338,8 +341,5 @@ class App(tk.Frame):
                             cur_best_im = filepath
                     self.output_img.paste(self.src_imgs[cur_best_im], box)
 
-        # save the image, rescale back to original size OR rescale to given size
-        # maybe make this part into a function
-        self.output_img.save("edited.png")
-        self.status_label.config(text="Photomosaic saved as edited.png")
-        print("Photomosaic saved as edited.png")
+        # save the image
+        self.save_img()
