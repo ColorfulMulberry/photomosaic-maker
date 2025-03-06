@@ -24,7 +24,7 @@ It was implemented in Python with the [tkinter library](https://docs.python.org/
 
 4. Choose multiple source images with the `Select Smaller Images (Sources)` button. which will be pasted onto the output image, recreating the input image. Choose at least 50 or more images for a good result, with a wide variety of color palettes.
    
-   There are sample images in the [sample_imgs](https://github.com/ColorfulMulberry/photomosaic-maker/tree/main/sample_imgs) folder, sourced from Pixabay. Download and unzip `sample_imgs.zip` in order to use them.
+   Sample images can be [found here](https://github.com/ColorfulMulberry/photomosaic-maker/raw/refs/heads/main/sample_imgs/sample_imgs.zip), sourced from Pixabay. Download and unzip `sample_imgs.zip` in order to use them.
 
 5. Adjust the size of the individual squares as needed using the `Square Size` slider. This will affect the size of each source image on the output image.
 
@@ -46,7 +46,7 @@ It was implemented in Python with the [tkinter library](https://docs.python.org/
 
 ## Additional Examples
 
-Examples below use the [sample_imgs](https://github.com/ColorfulMulberry/photomosaic-maker/tree/main/sample_imgs) folder as source images. Download and unzip `sample_imgs.zip` in order to use them.
+Examples below use the [sample_imgs](https://github.com/ColorfulMulberry/photomosaic-maker/raw/refs/heads/main/sample_imgs/sample_imgs.zip) folder as source images. Download and unzip `sample_imgs.zip` in order to use them.
 
 ### Original
 ![pie-5601656_1920](https://github.com/user-attachments/assets/23c0b8e5-9ebf-4bc1-bcba-3642dd3f698e)
